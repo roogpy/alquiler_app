@@ -328,3 +328,6 @@ input:focus, select:focus { outline: 2px solid var(--acento); border-color: tran
 .ultimo-valor span { display: block; font-size: .8rem; color: var(--acento); }
 .ultimo-valor small { display: block; font-size: .72rem; color: var(--texto-suave); }
 .ultimo-valor .sin-dato { color: var(--texto-suave); font-size: .85rem; }
+
+.tabla td.taller { color: var(--acento); }
+.vacio.nota { border-left: 2px solid var(--borde); padding-left: 10px; margin-bottom: 4px; }

@@ -60,8 +60,12 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
 
 El **pendiente** suma los días vencidos que no están marcados como pagados: los impagos
 explícitos y los que quedaron sin tocar. Los días futuros no suman deuda, pero sí se
-pueden marcar como pagados para registrar un adelanto. Los días en taller y los sin
-cobro no entran en los días esperados, así el "42 / 48" no miente.
+pueden marcar como pagados para registrar un adelanto.
+
+Los días **en taller** y los **sin cobro** no generan deuda: no entran en los días
+esperados, no suman al pendiente y no aparecen en la lista de días pendientes. El
+Resumen lo dice en la tarjeta de pendientes (cuántos días fueron y cuánto diario
+representan) y los muestra en su propia columna *Taller* de la tabla mensual.
 
 ## Respaldos
 

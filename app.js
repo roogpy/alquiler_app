@@ -178,7 +178,7 @@ function acumular(v, desde, hasta) {
   const hoy = hoyISO();
   const inicio = desde < v.inicio ? v.inicio : desde;
   const total = {
-    cobrado: 0, deuda: 0, extras: 0,
+    cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0,
     diasPagados: 0, diasEsperados: 0, diasImpagos: 0, diasTaller: 0,
     pendientes: [],
   };
@@ -190,7 +190,13 @@ function acumular(v, desde, hasta) {
       if (iso <= hoy) { total.diasPagados++; total.diasEsperados++; }
       continue;
     }
-    if (estado === 'taller' && iso <= hoy) { total.diasTaller++; continue; }
+    // Dia en taller: no se espera el diario, asi que no suma deuda ni entra
+    // en los dias esperados. Se guarda aparte cuanto diario representa.
+    if (estado === 'taller' && iso <= hoy) {
+      total.diasTaller++;
+      total.diarioTaller += Number(v.monto) || 0;
+      continue;
+    }
     if (iso > hoy || estado === 'libre' || estado === 'taller' || estado === 'fuera' || estado === 'futuro') continue;
 
     total.diasEsperados++;
@@ -208,7 +214,7 @@ function acumular(v, desde, hasta) {
 
 function acumularVehiculos(vehiculos, desde, hasta) {
   const total = {
-    cobrado: 0, deuda: 0, extras: 0,
+    cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0,
     diasPagados: 0, diasEsperados: 0, diasImpagos: 0, diasTaller: 0,
     pendientes: [],
   };
@@ -560,8 +566,15 @@ function renderResumen() {
   $('res-extras').textContent = fmt(t.extras);
   $('res-rango').textContent = 'Del ' + fechaLegible(desde, true) + ' al ' + fechaLegible(hasta, true);
 
-  // Dias adeudados, del mas reciente al mas viejo.
+  // Dias adeudados, del mas reciente al mas viejo. Los dias en taller y los
+  // sin cobro no entran: no se esperaba plata de esos dias, asi que no son
+  // deuda ni figuran en la lista.
   $('res-pendientes-total').textContent = fmt(t.deuda);
+  $('res-nota-taller').textContent = t.diasTaller
+    ? 'No suman: ' + t.diasTaller + (t.diasTaller === 1 ? ' día en taller' : ' días en taller') +
+      ' (' + fmt(t.diarioTaller) + ' de diario que no se cobra) y los días sin cobro. ' +
+      'Quedan fuera de los días esperados, del pendiente y de esta lista.'
+    : 'Los días en taller y los sin cobro no generan deuda: no entran en los días esperados ni en esta lista.';
   const ordenados = t.pendientes.sort((a, b) => b.fecha.localeCompare(a.fecha));
   if (!ordenados.length) {
     const li = document.createElement('li');
@@ -616,13 +629,14 @@ function renderResumen() {
   env.className = 'envoltorio-tabla';
   const tab = document.createElement('table');
   tab.className = 'tabla';
-  tab.innerHTML = '<thead><tr><th>Mes</th><th>Días</th><th>Diario</th><th>Adicional</th><th>Pendiente</th></tr></thead>';
+  tab.innerHTML = '<thead><tr><th>Mes</th><th>Pagados</th><th>Taller</th><th>Diario</th><th>Adicional</th><th>Pendiente</th></tr></thead>';
   const tbody = document.createElement('tbody');
   meses.slice().reverse().forEach(mes => {
     const tr = document.createElement('tr');
     tr.innerHTML =
       '<td>' + mesLegible(mes.clave, true) + '</td>' +
       '<td>' + mes.total.diasPagados + ' / ' + mes.total.diasEsperados + '</td>' +
+      '<td class="taller">' + (mes.total.diasTaller || '—') + '</td>' +
       '<td class="cobrado">' + fmt(mes.total.cobrado) + '</td>' +
       '<td>' + fmt(mes.total.extras) + '</td>' +
       '<td class="deuda' + (mes.total.deuda > 0 ? ' hay' : '') + '">' + fmt(mes.total.deuda) + '</td>';
@@ -633,6 +647,7 @@ function renderResumen() {
   tr.innerHTML =
     '<td>Total</td>' +
     '<td>' + t.diasPagados + ' / ' + t.diasEsperados + '</td>' +
+    '<td class="taller">' + (t.diasTaller || '—') + '</td>' +
     '<td class="cobrado">' + fmt(t.cobrado) + '</td>' +
     '<td>' + fmt(t.extras) + '</td>' +
     '<td class="deuda' + (t.deuda > 0 ? ' hay' : '') + '">' + fmt(t.deuda) + '</td>';
