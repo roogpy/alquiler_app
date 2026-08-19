@@ -331,3 +331,5 @@ input:focus, select:focus { outline: 2px solid var(--acento); border-color: tran
 
 .tabla td.taller { color: var(--acento); }
 .vacio.nota { border-left: 2px solid var(--borde); padding-left: 10px; margin-bottom: 4px; }
+
+.btn.ambar { background: #b7791f; }

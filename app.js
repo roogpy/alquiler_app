@@ -9,10 +9,15 @@ const STORE_KEY = 'alquiler-datos-v1';
 const ESTADOS = {
   pagado: { etiqueta: 'Pagado' },
   impago: { etiqueta: 'No pagó' },
+  pendiente: { etiqueta: 'Pendiente' },
   taller: { etiqueta: 'En taller' },
   libre:  { etiqueta: 'Sin cobro' },
-  pendiente: { etiqueta: 'Pendiente' },
+  sinmarcar: { etiqueta: 'Sin marcar' },
 };
+
+// Los unicos estados que se cuentan como plata que falta entrar. Un dia del
+// pasado sin tocar NO entra: solo es deuda lo que se marca a mano.
+const ESTADOS_DEUDA = ['impago', 'pendiente'];
 
 const TIPOS_SERVICIO = {
   mantenimiento: 'Mantenimiento general',
@@ -154,17 +159,17 @@ function serviciosDe(v) { return datos.servicios[v.id] || []; }
 
 // Estado de un dia para un vehiculo:
 //   fuera     -> anterior al inicio del alquiler
-//   pagado / impago / taller / libre -> marcado a mano
+//   pagado / impago / pendiente / taller / libre -> marcado a mano
 //   libre     -> dia de la semana en el que no se cobra
 //   futuro    -> todavia no llego
-//   pendiente -> se esperaba el pago y no esta marcado
+//   sinmarcar -> dia de cobro ya pasado que todavia no se clasifico
 function estadoDia(v, iso) {
   if (iso < v.inicio) return 'fuera';
   const reg = registro(v, iso);
   if (reg) return reg.estado;
   if (!v.dias.includes(aFecha(iso).getDay())) return 'libre';
   if (iso > hoyISO()) return 'futuro';
-  return 'pendiente';
+  return 'sinmarcar';
 }
 
 function montoCobrado(v, iso) {
@@ -173,13 +178,14 @@ function montoCobrado(v, iso) {
 }
 
 // Recorre los dias de un rango y acumula lo cobrado, lo que falta y los dias.
-// Los dias futuros no generan deuda; los de taller y los sin cobro no se esperan.
+// Solo generan deuda los dias marcados como Pendiente o No pago: los que
+// quedaron sin marcar se cuentan aparte y no ensucian el total.
 function acumular(v, desde, hasta) {
   const hoy = hoyISO();
   const inicio = desde < v.inicio ? v.inicio : desde;
   const total = {
     cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0,
-    diasPagados: 0, diasEsperados: 0, diasImpagos: 0, diasTaller: 0,
+    diasPagados: 0, diasEsperados: 0, diasImpagos: 0, diasTaller: 0, diasSinMarcar: 0,
     pendientes: [],
   };
 
@@ -197,7 +203,10 @@ function acumular(v, desde, hasta) {
       total.diarioTaller += Number(v.monto) || 0;
       continue;
     }
-    if (iso > hoy || estado === 'libre' || estado === 'taller' || estado === 'fuera' || estado === 'futuro') continue;
+    if (iso > hoy || estado === 'fuera' || estado === 'futuro') continue;
+    // Dia de cobro que paso y quedo sin clasificar: se avisa, no se cobra.
+    if (estado === 'sinmarcar') { total.diasSinMarcar++; continue; }
+    if (!ESTADOS_DEUDA.includes(estado)) continue;
 
     total.diasEsperados++;
     total.deuda += Number(v.monto) || 0;
@@ -215,7 +224,7 @@ function acumular(v, desde, hasta) {
 function acumularVehiculos(vehiculos, desde, hasta) {
   const total = {
     cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0,
-    diasPagados: 0, diasEsperados: 0, diasImpagos: 0, diasTaller: 0,
+    diasPagados: 0, diasEsperados: 0, diasImpagos: 0, diasTaller: 0, diasSinMarcar: 0,
     pendientes: [],
   };
   vehiculos.forEach(v => {
@@ -346,6 +355,7 @@ function renderCalendario() {
     else if (estado === 'taller') marca.textContent = '🔧';
     else if (estado === 'pendiente') marca.textContent = '•';
     else marca.textContent = ' ';
+    if (estado === 'sinmarcar') btn.title = 'Sin marcar';
     btn.append(num, marca);
     grilla.appendChild(btn);
   }
@@ -374,7 +384,8 @@ function renderDetalle() {
   const reg = registro(v, diaSel);
   $('detalle-titulo').textContent = fechaLegible(diaSel, true);
 
-  const desc = estado === 'pendiente' ? 'Pendiente: se esperaba ' + fmt(v.monto)
+  const desc = estado === 'pendiente' ? 'Pendiente: debe ' + fmt(v.monto)
+    : estado === 'sinmarcar' ? 'Sin marcar — no cuenta como deuda hasta que lo marques'
     : estado === 'futuro' ? 'Día futuro (podés registrar un adelanto)'
     : estado === 'taller' ? 'En taller — no se cobra el diario'
     : ESTADOS[estado] ? ESTADOS[estado].etiqueta : '';
@@ -423,7 +434,7 @@ function renderListaMes() {
     const monto = document.createElement('span');
     monto.className = 'monto ' + (reg.estado === 'pagado' ? 'positivo' : 'negativo');
     monto.textContent = reg.estado === 'pagado' ? fmt(reg.monto)
-      : reg.estado === 'impago' ? '−' + fmt(v.monto) : '—';
+      : ESTADOS_DEUDA.includes(reg.estado) ? '−' + fmt(v.monto) : '—';
 
     const borrar = document.createElement('button');
     borrar.className = 'icono borrar';
@@ -548,6 +559,7 @@ function renderResumen() {
       .forEach(id => { $(id).textContent = fmt(0); });
     $('res-dias').textContent = '0 / 0';
     $('res-taller').textContent = '0';
+    $('res-sinmarcar').textContent = '0';
     $('res-rango').textContent = 'Historial';
     tabla.innerHTML = '<p class="vacio">Todavía no hay alquileres cargados.</p>';
     return;
@@ -562,6 +574,7 @@ function renderResumen() {
   deuda.classList.toggle('hay', t.deuda > 0);
   $('res-dias').textContent = t.diasPagados + ' / ' + t.diasEsperados;
   $('res-taller').textContent = t.diasTaller;
+  $('res-sinmarcar').textContent = t.diasSinMarcar;
   $('res-diario').textContent = fmt(t.cobrado);
   $('res-extras').textContent = fmt(t.extras);
   $('res-rango').textContent = 'Del ' + fechaLegible(desde, true) + ' al ' + fechaLegible(hasta, true);
@@ -570,16 +583,21 @@ function renderResumen() {
   // sin cobro no entran: no se esperaba plata de esos dias, asi que no son
   // deuda ni figuran en la lista.
   $('res-pendientes-total').textContent = fmt(t.deuda);
-  $('res-nota-taller').textContent = t.diasTaller
-    ? 'No suman: ' + t.diasTaller + (t.diasTaller === 1 ? ' día en taller' : ' días en taller') +
-      ' (' + fmt(t.diarioTaller) + ' de diario que no se cobra) y los días sin cobro. ' +
-      'Quedan fuera de los días esperados, del pendiente y de esta lista.'
-    : 'Los días en taller y los sin cobro no generan deuda: no entran en los días esperados ni en esta lista.';
+  const partes = ['Acá solo entra lo que marcaste como Pendiente o No pagó.'];
+  if (t.diasSinMarcar) {
+    partes.push('Hay ' + t.diasSinMarcar + (t.diasSinMarcar === 1 ? ' día de cobro sin marcar' : ' días de cobro sin marcar') +
+      ': no cuentan como deuda hasta que los marques.');
+  }
+  if (t.diasTaller) {
+    partes.push(t.diasTaller + (t.diasTaller === 1 ? ' día en taller' : ' días en taller') +
+      ' (' + fmt(t.diarioTaller) + ' de diario) tampoco suman.');
+  }
+  $('res-nota-taller').textContent = partes.join(' ');
   const ordenados = t.pendientes.sort((a, b) => b.fecha.localeCompare(a.fecha));
   if (!ordenados.length) {
     const li = document.createElement('li');
     li.className = 'vacio';
-    li.textContent = 'Al día: no quedan diarios sin cobrar en este período.';
+    li.textContent = 'Sin pendientes marcados en este período.';
     pendientes.appendChild(li);
   } else {
     ordenados.slice(0, 30).forEach(p => {
