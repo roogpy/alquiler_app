@@ -66,7 +66,18 @@ python -m http.server 8741 --directory C:/alquiler_app
 
 Después abrir <http://localhost:8741>.
 
-## Publicar
+## Publicada
 
-Mismo camino que `conductor_app`: push del contenido a un repo con GitHub Pages
-activado. Al ser todo estático, no hace falta build.
+<https://roogpy.github.io/alquiler_app/> — repo `roogpy/alquiler_app`, GitHub Pages
+sirviendo `main` desde la raíz. Al ser todo estático no hay build: un `git push` a
+`main` alcanza y la versión nueva entra en la siguiente apertura (el service worker
+va network-first para el código).
+
+### Instalar en el celular
+
+- **Android / Chrome**: abrir la URL → menú ⋮ → *Agregar a la pantalla principal*
+  (o *Instalar aplicación*).
+- **iPhone / Safari**: abrir la URL → botón compartir → *Agregar a inicio*.
+
+Queda como una app más, en pantalla completa y sin barra del navegador. Los datos son
+por dispositivo: si se usa en dos teléfonos, cada uno lleva su propio calendario.
