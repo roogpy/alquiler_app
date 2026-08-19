@@ -186,15 +186,19 @@ function acumular(v, desde, hasta) {
   const inicio = desde < v.inicio ? v.inicio : desde;
   const total = {
     cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0,
-    diasPagados: 0, diasEsperados: 0, diasImpagos: 0, diasTaller: 0, diasSinMarcar: 0,
+    diasPagados: 0, diasPeriodo: 0, diasImpagos: 0, diasTaller: 0,
     pendientes: [],
   };
 
   for (let iso = inicio; iso <= hasta; iso = sumarDias(iso, 1)) {
     const estado = estadoDia(v, iso);
+    // Dias corridos del periodo que ya pasaron: es el denominador del
+    // "26 / 31", asi se ve cuantos dias del mes se cobraron de verdad.
+    if (iso <= hoy) total.diasPeriodo++;
+
     if (estado === 'pagado') {
       total.cobrado += montoCobrado(v, iso);
-      if (iso <= hoy) { total.diasPagados++; total.diasEsperados++; }
+      if (iso <= hoy) total.diasPagados++;
       continue;
     }
     // Dia en taller: no se espera el diario, asi que no suma deuda ni entra
@@ -206,13 +210,12 @@ function acumular(v, desde, hasta) {
     }
     if (iso > hoy || estado === 'fuera' || estado === 'futuro') continue;
     // Dia de cobro que paso y quedo sin clasificar: se avisa, no se cobra.
-    if (estado === 'sinmarcar') { total.diasSinMarcar++; continue; }
+    if (estado === 'sinmarcar') continue;
     // "No pago" queda como registro del dia, pero no es deuda: no suma al
     // pendiente ni entra en la lista.
     if (estado === 'impago') { total.diasImpagos++; continue; }
     if (!ESTADOS_DEUDA.includes(estado)) continue;
 
-    total.diasEsperados++;
     total.deuda += Number(v.monto) || 0;
     total.pendientes.push({ fecha: iso, vehiculo: v, monto: Number(v.monto) || 0, estado });
   }
@@ -227,7 +230,7 @@ function acumular(v, desde, hasta) {
 function acumularVehiculos(vehiculos, desde, hasta) {
   const total = {
     cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0,
-    diasPagados: 0, diasEsperados: 0, diasImpagos: 0, diasTaller: 0, diasSinMarcar: 0,
+    diasPagados: 0, diasPeriodo: 0, diasImpagos: 0, diasTaller: 0,
     pendientes: [],
   };
   vehiculos.forEach(v => {
@@ -368,7 +371,7 @@ function renderCalendario() {
   const deuda = $('mes-deuda');
   deuda.textContent = fmt(t.deuda);
   deuda.classList.toggle('hay', t.deuda > 0);
-  $('mes-dias').textContent = t.diasPagados + ' / ' + t.diasEsperados;
+  $('mes-dias').textContent = t.diasPagados + ' / ' + t.diasPeriodo;
   $('mes-taller').textContent = t.diasTaller;
   $('mes-extras').textContent = fmt(t.extras);
 
@@ -564,7 +567,6 @@ function renderResumen() {
       .forEach(id => { $(id).textContent = fmt(0); });
     $('res-dias').textContent = '0 / 0';
     $('res-taller').textContent = '0';
-    $('res-sinmarcar').textContent = '0';
     $('res-dias-pend').textContent = '0';
     $('res-impagos').textContent = '0';
     $('res-rango').textContent = 'Historial';
@@ -579,9 +581,8 @@ function renderResumen() {
   const deuda = $('res-deuda');
   deuda.textContent = fmt(t.deuda);
   deuda.classList.toggle('hay', t.deuda > 0);
-  $('res-dias').textContent = t.diasPagados + ' / ' + t.diasEsperados;
+  $('res-dias').textContent = t.diasPagados + ' / ' + t.diasPeriodo;
   $('res-taller').textContent = t.diasTaller;
-  $('res-sinmarcar').textContent = t.diasSinMarcar;
   $('res-dias-pend').textContent = t.pendientes.length;
   $('res-impagos').textContent = t.diasImpagos;
   $('res-diario').textContent = fmt(t.cobrado);
@@ -594,12 +595,9 @@ function renderResumen() {
   $('res-pendientes-total').textContent = fmt(t.deuda);
   const partes = ['Acá solo entra lo que marcaste como Pendiente.'];
   if (t.diasImpagos) {
-    partes.push(t.diasImpagos + (t.diasImpagos === 1 ? ' día marcado como No pagó queda' : ' días marcados como No pagó quedan') +
-      ' registrados, pero no suman al pendiente.');
-  }
-  if (t.diasSinMarcar) {
-    partes.push('Hay ' + t.diasSinMarcar + (t.diasSinMarcar === 1 ? ' día de cobro sin marcar' : ' días de cobro sin marcar') +
-      ': no cuentan como deuda hasta que los marques.');
+    partes.push(t.diasImpagos === 1
+      ? '1 día marcado como No pagó queda registrado, pero no suma al pendiente.'
+      : t.diasImpagos + ' días marcados como No pagó quedan registrados, pero no suman al pendiente.');
   }
   if (t.diasTaller) {
     partes.push(t.diasTaller + (t.diasTaller === 1 ? ' día en taller' : ' días en taller') +
@@ -666,7 +664,7 @@ function renderResumen() {
     const tr = document.createElement('tr');
     tr.innerHTML =
       '<td>' + mesLegible(mes.clave, true) + '</td>' +
-      '<td>' + mes.total.diasPagados + ' / ' + mes.total.diasEsperados + '</td>' +
+      '<td>' + mes.total.diasPagados + ' / ' + mes.total.diasPeriodo + '</td>' +
       '<td>' + (mes.total.diasImpagos || '—') + '</td>' +
       '<td class="taller">' + (mes.total.diasTaller || '—') + '</td>' +
       '<td class="cobrado">' + fmt(mes.total.cobrado) + '</td>' +
@@ -678,7 +676,7 @@ function renderResumen() {
   tr.className = 'total';
   tr.innerHTML =
     '<td>Total</td>' +
-    '<td>' + t.diasPagados + ' / ' + t.diasEsperados + '</td>' +
+    '<td>' + t.diasPagados + ' / ' + t.diasPeriodo + '</td>' +
     '<td>' + (t.diasImpagos || '—') + '</td>' +
     '<td class="taller">' + (t.diasTaller || '—') + '</td>' +
     '<td class="cobrado">' + fmt(t.cobrado) + '</td>' +

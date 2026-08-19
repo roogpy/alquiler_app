@@ -41,10 +41,11 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
    (el 50% de un arreglo, una multa): llevan fecha, monto y concepto, no cuentan como
    día pagado y marcan el día con un `+` en el calendario.
 3. **Resumen** → con **rango de fechas** (por defecto todo el alquiler): recibido total,
-   pendiente, **días pagados / esperados**, **días en taller**, cobros diarios contra
-   pagos adicionales, la lista de **días pendientes de cobro** con cuántos días de
-   atraso lleva cada uno, tabla mes a mes y gráfico de los últimos 12 meses. El selector
-   permite ver un vehículo o todos juntos.
+   pendiente, **días pagados sobre los días corridos del período** (26 / 31 en un julio
+   completo), días marcados como Pendiente y como No pagó, **días en taller**, cobros
+   diarios contra pagos adicionales, la lista de **días pendientes de cobro** con
+   cuántos días de atraso lleva cada uno, tabla mes a mes y gráfico de los últimos 12
+   meses. El selector permite ver un vehículo o todos juntos.
 4. **Taller** → **último mantenimiento general** y **última rotación de cubiertas**, cada
    uno con su fecha, el kilometraje de ese día y hace cuántos días fue. Debajo, el form
    para registrar un trabajo (tipo, fecha, km, costo, detalle) y el historial completo.
@@ -64,9 +65,12 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
 
 El **pendiente** suma únicamente los días marcados a mano como **Pendiente**. Ni los
 días **No pagó**, ni los que quedaron **sin marcar**, ni los de **taller** generan
-deuda: cada uno tiene su propio contador en el Resumen, para que se vean sin inventar
-deuda que no existe. Los días futuros tampoco suman, pero sí se pueden marcar como
-pagados para registrar un adelanto.
+deuda. Los días futuros tampoco suman, pero sí se pueden marcar como pagados para
+registrar un adelanto.
+
+El contador **días pagados** compara contra los **días corridos del período** que ya
+pasaron: un julio entero da `26 / 31` y el mes en curso se mide hasta hoy. Así el
+denominador es el calendario, no una cuenta interna de la app.
 
 Los días **en taller** y los **sin cobro** no generan deuda: no entran en los días
 esperados, no suman al pendiente y no aparecen en la lista de días pendientes. El
