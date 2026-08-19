@@ -27,9 +27,10 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
    detalle para marcarlo:
    - **✓ Pagado** — se guarda el monto recibido (por defecto el diario; se puede editar
      si pagó de menos o de más) y una nota opcional.
-   - **✗ No pagó** — el día queda registrado como impago y suma al pendiente.
-   - **• Pendiente** — todavía debe ese diario. Suma al pendiente igual que el impago;
-     la nota sirve para anotar el arreglo ("paga el lunes").
+   - **✗ No pagó** — queda registrado que ese día no entró plata, pero **no** genera
+     deuda: es historial, no un cobro por hacer.
+   - **• Pendiente** — el único estado que suma al pendiente: todavía debe ese diario.
+     La nota sirve para anotar el arreglo ("paga el lunes").
    - **🔧 En taller** — el auto estuvo con el mecánico: no se cobra el diario y el día
      suma al contador de *días en taller*. La **nota** queda para anotar el trabajo.
    - **— Sin cobro** — feriado, vehículo parado: ese día no se espera plata.
@@ -55,17 +56,17 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
 | Color | Estado | Significado |
 | --- | --- | --- |
 | Verde | Pagado | Se recibió el pago (muestra el monto abreviado) |
-| Rojo | No pagó | Día vencido marcado como impago |
-| Borde ámbar | Pendiente | Marcado a mano: debe ese diario |
+| Rojo | No pagó | Marcado a mano: ese día no pagó (registro, sin deuda) |
+| Borde ámbar | Pendiente | Marcado a mano: debe ese diario (lo único que es deuda) |
 | Azul 🔧 | En taller | Día con el mecánico: no se cobra y se cuenta aparte |
 | Gris | Sin cobro | Día de la semana no cobrable o marcado como libre |
 | Neutro | Sin marcar | Día de cobro que pasó y todavía no se clasificó |
 
-El **pendiente** suma únicamente los días marcados a mano como **Pendiente** o
-**No pagó**. Un día de cobro que pasó y quedó **sin marcar** no es deuda: se cuenta
-aparte, en la tarjeta *Sin marcar* del Resumen, para no inventar deuda que no existe.
-Los días futuros tampoco suman, pero sí se pueden marcar como pagados para registrar un
-adelanto.
+El **pendiente** suma únicamente los días marcados a mano como **Pendiente**. Ni los
+días **No pagó**, ni los que quedaron **sin marcar**, ni los de **taller** generan
+deuda: cada uno tiene su propio contador en el Resumen, para que se vean sin inventar
+deuda que no existe. Los días futuros tampoco suman, pero sí se pueden marcar como
+pagados para registrar un adelanto.
 
 Los días **en taller** y los **sin cobro** no generan deuda: no entran en los días
 esperados, no suman al pendiente y no aparecen en la lista de días pendientes. El

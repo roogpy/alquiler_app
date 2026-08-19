@@ -1,4 +1,4 @@
-const CACHE = 'alquiler-v4';
+const CACHE = 'alquiler-v5';
 
 const ASSETS = [
   './',
