@@ -32,7 +32,11 @@
       <div class="tarjetas-mini">
         <div class="mini"><span>Cobrado en el mes</span><strong id="mes-cobrado">₲ 0</strong></div>
         <div class="mini"><span>Pendiente del mes</span><strong id="mes-deuda" class="deuda">₲ 0</strong></div>
+      </div>
+      <div class="tarjetas-mini">
         <div class="mini"><span>Días pagados</span><strong id="mes-dias">0 / 0</strong></div>
+        <div class="mini"><span>Días en taller</span><strong id="mes-taller">0</strong></div>
+        <div class="mini"><span>Adicionales</span><strong id="mes-extras">₲ 0</strong></div>
       </div>
 
       <div class="tarjeta">
@@ -49,6 +53,7 @@
           <span><i class="lg pagado"></i>Pagado</span>
           <span><i class="lg impago"></i>No pagó</span>
           <span><i class="lg pendiente"></i>Pendiente</span>
+          <span><i class="lg taller"></i>En taller</span>
           <span><i class="lg libre"></i>Sin cobro</span>
         </div>
 
@@ -62,13 +67,14 @@
         <p class="vacio" id="detalle-estado"></p>
         <div class="fila">
           <label>Monto recibido (₲) <input type="text" id="detalle-monto" inputmode="numeric" autocomplete="off" placeholder="0"></label>
-          <label>Nota <input type="text" id="detalle-nota" maxlength="60" placeholder="opcional"></label>
+          <label>Nota <input type="text" id="detalle-nota" maxlength="60" placeholder="motivo, detalle del taller…"></label>
         </div>
         <div class="acciones">
           <button class="btn verde" type="button" data-estado="pagado">✓ Pagado</button>
           <button class="btn rojo" type="button" data-estado="impago">✗ No pagó</button>
+          <button class="btn azul" type="button" data-estado="taller">🔧 En taller</button>
           <button class="btn gris" type="button" data-estado="libre">— Sin cobro</button>
-          <button class="btn gris" type="button" data-estado="limpiar">↺ Limpiar</button>
+          <button class="btn gris ancho" type="button" data-estado="limpiar">↺ Limpiar el día</button>
         </div>
       </div>
 
@@ -76,6 +82,18 @@
         <h2>Movimientos del mes</h2>
         <ul id="lista-mes" class="lista"></ul>
       </div>
+
+      <form id="form-extra" class="tarjeta">
+        <h2>➕ Pago adicional</h2>
+        <p class="vacio">Cobros por fuera del diario: el 50% de un arreglo, una multa, un lavado. No cuentan como día pagado.</p>
+        <div class="fila">
+          <label>Fecha <input type="date" id="ex-fecha" required></label>
+          <label>Monto (₲) <input type="text" id="ex-monto" inputmode="numeric" autocomplete="off" required placeholder="200.000"></label>
+        </div>
+        <label>Concepto <input type="text" id="ex-concepto" maxlength="60" placeholder="50% cambio de embrague"></label>
+        <button type="submit" class="btn verde">Guardar pago adicional</button>
+        <ul id="lista-extras" class="lista"></ul>
+      </form>
     </div>
   </section>
 
@@ -85,27 +103,91 @@
       <select id="res-vehiculo"></select>
     </label>
 
+    <div class="tarjeta">
+      <div class="fila">
+        <label>Desde <input type="date" id="res-desde-input"></label>
+        <label>Hasta <input type="date" id="res-hasta-input"></label>
+      </div>
+      <button id="btn-rango-todo" class="btn gris" type="button">↺ Todo el alquiler</button>
+    </div>
+
     <div class="tarjetas-mini">
       <div class="mini neto"><span>Recibido total</span><strong id="res-total">₲ 0</strong></div>
-      <div class="mini"><span>Pendiente acumulado</span><strong id="res-deuda" class="deuda">₲ 0</strong></div>
+      <div class="mini"><span>Pendiente</span><strong id="res-deuda" class="deuda">₲ 0</strong></div>
     </div>
     <div class="tarjetas-mini">
       <div class="mini"><span>Días pagados</span><strong id="res-dias">0 / 0</strong></div>
-      <div class="mini"><span>Promedio por día</span><strong id="res-promedio">₲ 0</strong></div>
+      <div class="mini"><span>Días en taller</span><strong id="res-taller">0</strong></div>
+    </div>
+    <div class="tarjetas-mini">
+      <div class="mini"><span>Cobros diarios</span><strong id="res-diario">₲ 0</strong></div>
+      <div class="mini"><span>Pagos adicionales</span><strong id="res-extras">₲ 0</strong></div>
     </div>
 
     <div class="tarjeta">
-      <h2 id="res-desde"></h2>
+      <h2 class="con-total"><span>Días pendientes de cobro</span> <strong id="res-pendientes-total" class="rojo">₲ 0</strong></h2>
+      <ul id="res-pendientes" class="lista"></ul>
+    </div>
+
+    <div class="tarjeta">
+      <h2 id="res-rango">Historial</h2>
       <div id="res-tabla"></div>
     </div>
 
     <div class="tarjeta">
-      <h2 class="con-total"><span>Cobrado por mes</span> <strong id="res-grafico-total">₲ 0</strong></h2>
+      <h2 class="con-total"><span>Recibido por mes</span> <strong id="res-grafico-total">₲ 0</strong></h2>
       <div id="res-grafico" class="grafico"></div>
     </div>
 
     <div class="fila derecha">
       <button id="btn-csv" class="btn gris" type="button">⬇ Exportar CSV</button>
+    </div>
+  </section>
+
+  <!-- TAB TALLER -->
+  <section id="tab-taller" class="tab">
+    <label class="selector-veh">Vehículo
+      <select id="tal-vehiculo"></select>
+    </label>
+
+    <div class="tarjetas-mini">
+      <div class="mini"><span>Días en taller</span><strong id="tal-dias">0</strong></div>
+      <div class="mini"><span>Costo de trabajos</span><strong id="tal-gasto">₲ 0</strong></div>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Último de cada trabajo</h2>
+      <div id="tal-ultimos"></div>
+    </div>
+
+    <form id="form-servicio" class="tarjeta">
+      <h2 id="serv-titulo">➕ Registrar trabajo</h2>
+      <input type="hidden" id="s-id">
+      <div class="fila">
+        <label>Tipo
+          <select id="s-tipo">
+            <option value="mantenimiento">Mantenimiento general</option>
+            <option value="cubiertas">Rotación de cubiertas</option>
+            <option value="otro">Otro trabajo</option>
+          </select>
+        </label>
+        <label>Fecha <input type="date" id="s-fecha" required></label>
+      </div>
+      <div class="fila">
+        <label>Kilometraje <input type="text" id="s-km" inputmode="numeric" autocomplete="off" placeholder="125.000"></label>
+        <label>Costo (₲) <input type="text" id="s-costo" inputmode="numeric" autocomplete="off" placeholder="opcional"></label>
+      </div>
+      <label>Detalle <input type="text" id="s-nota" maxlength="60" placeholder="cambio de aceite y filtros"></label>
+      <label class="check"><input type="checkbox" id="s-mitad"> Cobrar el 50% al inquilino como pago adicional</label>
+      <div class="fila">
+        <button type="submit" class="btn verde">Guardar trabajo</button>
+        <button type="button" id="btn-cancelar-serv" class="btn gris" hidden>Cancelar</button>
+      </div>
+    </form>
+
+    <div class="tarjeta">
+      <h2>Historial de trabajos</h2>
+      <ul id="lista-servicios" class="lista"></ul>
     </div>
   </section>
 
@@ -150,6 +232,7 @@
 <nav class="nav-inferior">
   <button data-tab="calendario" class="activa" type="button">📅<span>Calendario</span></button>
   <button data-tab="resumen" type="button">📊<span>Resumen</span></button>
+  <button data-tab="taller" type="button">🔧<span>Taller</span></button>
   <button data-tab="vehiculos" type="button">🚗<span>Vehículos</span></button>
 </nav>
 

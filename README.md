@@ -12,7 +12,7 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
 
 | Archivo | Qué hace |
 | --- | --- |
-| `index.html` | Estructura: tabs Calendario / Resumen / Vehículos y barra inferior |
+| `index.html` | Estructura: tabs Calendario / Resumen / Taller / Vehículos y barra inferior |
 | `app.js` | Todo el modelo y el render (sin frameworks) |
 | `styles.css` | Tema oscuro, grilla del calendario, tarjetas, gráfico de barras |
 | `manifest.json` | Metadatos de la PWA |
@@ -28,13 +28,25 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
    - **✓ Pagado** — se guarda el monto recibido (por defecto el diario; se puede editar
      si pagó de menos o de más) y una nota opcional.
    - **✗ No pagó** — el día queda registrado como impago y suma al pendiente.
-   - **— Sin cobro** — feriado, vehículo en taller, etc.: ese día no se espera plata.
+   - **🔧 En taller** — el auto estuvo con el mecánico: no se cobra el diario y el día
+     suma al contador de *días en taller*. La **nota** queda para anotar el trabajo.
+   - **— Sin cobro** — feriado, vehículo parado: ese día no se espera plata.
    - **↺ Limpiar** — vuelve el día a su estado automático.
 
-   El botón **Marcar hoy como pagado** hace lo de todos los días en un toque.
-3. **Resumen** → total recibido desde el día 1, pendiente acumulado, días pagados sobre
-   días esperados, promedio por día, tabla mes a mes y gráfico de los últimos 12 meses.
-   El selector permite ver un vehículo o todos juntos.
+   El botón **Marcar hoy como pagado** hace lo de todos los días en un toque. Abajo del
+   calendario está el form de **pago adicional**, para los cobros por fuera del diario
+   (el 50% de un arreglo, una multa): llevan fecha, monto y concepto, no cuentan como
+   día pagado y marcan el día con un `+` en el calendario.
+3. **Resumen** → con **rango de fechas** (por defecto todo el alquiler): recibido total,
+   pendiente, **días pagados / esperados**, **días en taller**, cobros diarios contra
+   pagos adicionales, la lista de **días pendientes de cobro** con cuántos días de
+   atraso lleva cada uno, tabla mes a mes y gráfico de los últimos 12 meses. El selector
+   permite ver un vehículo o todos juntos.
+4. **Taller** → **último mantenimiento general** y **última rotación de cubiertas**, cada
+   uno con su fecha, el kilometraje de ese día y hace cuántos días fue. Debajo, el form
+   para registrar un trabajo (tipo, fecha, km, costo, detalle) y el historial completo.
+   Tildando *Cobrar el 50% al inquilino* se crea solo el pago adicional por la mitad del
+   costo.
 
 ### Estados del calendario
 
@@ -43,18 +55,24 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
 | Verde | Pagado | Se recibió el pago (muestra el monto abreviado) |
 | Rojo | No pagó | Día vencido marcado como impago |
 | Borde ámbar | Pendiente | Día de cobro ya pasado y todavía sin marcar |
+| Azul 🔧 | En taller | Día con el mecánico: no se cobra y se cuenta aparte |
 | Gris | Sin cobro | Día de la semana no cobrable o marcado como libre |
 
 El **pendiente** suma los días vencidos que no están marcados como pagados: los impagos
 explícitos y los que quedaron sin tocar. Los días futuros no suman deuda, pero sí se
-pueden marcar como pagados para registrar un adelanto.
+pueden marcar como pagados para registrar un adelanto. Los días en taller y los sin
+cobro no entran en los días esperados, así el "42 / 48" no miente.
 
 ## Respaldos
 
 Los datos son locales al navegador: si se limpia el sitio o se cambia de teléfono, se
 pierden. En **Vehículos → Copia de seguridad** están *Descargar respaldo* (JSON) y
-*Restaurar respaldo*. El **Exportar CSV** del Resumen saca los pagos día por día para
-abrir en Excel (separador `;`).
+*Restaurar respaldo*. El **Exportar CSV** del Resumen saca todo ordenado por fecha para
+abrir en Excel (separador `;`), con una columna `tipo` que distingue `diario`,
+`adicional` y `taller`.
+
+Los respaldos de la primera versión (sin adicionales ni trabajos) se restauran igual:
+esos dos bloques quedan vacíos.
 
 ## Correr localmente
 

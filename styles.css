@@ -9,6 +9,7 @@
   --rojo: #e74c3c;
   --ambar: #f0b27a;
   --acento: #4f8cff;
+  --violeta: #8b5cf6;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -270,3 +271,60 @@ input:focus, select:focus { outline: 2px solid var(--acento); border-color: tran
   .encabezado { text-align: center; }
   .nav-inferior { position: sticky; max-width: 760px; margin: 0 auto; border-radius: 14px 14px 0 0; }
 }
+
+/* ---------- Taller, adicionales y estados nuevos ---------- */
+.dia { position: relative; }
+.dia.taller { background: #1c2f52; border-color: var(--acento); }
+.dia.taller .marca { font-size: .58rem; }
+/* Marquita para los dias que ademas tienen un cobro por fuera del diario. */
+.dia.con-extra::after {
+  content: '+';
+  position: absolute;
+  top: 1px;
+  right: 4px;
+  font-size: .65rem;
+  line-height: 1;
+  color: var(--violeta);
+}
+.leyenda .lg.taller { background: #1c2f52; border-color: var(--acento); }
+
+.chip.pendiente { background: var(--ambar); }
+.chip.taller { background: var(--acento); color: #fff; }
+.chip.extra { background: var(--violeta); color: #fff; }
+.chip.serv-mantenimiento { background: var(--acento); color: #fff; }
+.chip.serv-cubiertas { background: var(--violeta); color: #fff; }
+.chip.serv-otro { background: var(--texto-suave); }
+
+.btn.azul { background: #2f6fd0; }
+.acciones .btn.ancho { grid-column: 1 / -1; }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+  font-size: .82rem;
+  color: var(--texto);
+}
+.check input { width: auto; margin: 0; flex: none; }
+
+#lista-extras { margin-top: 12px; }
+
+.tarjeta h2.con-total strong.rojo { color: var(--rojo); }
+
+/* Ultimo mantenimiento / ultima rotacion de cubiertas */
+.ultimo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--borde);
+}
+.ultimo:last-child { border-bottom: none; }
+.ultimo-tipo { font-size: .88rem; }
+.ultimo-valor { text-align: right; }
+.ultimo-valor strong { display: block; font-size: .95rem; }
+.ultimo-valor span { display: block; font-size: .8rem; color: var(--acento); }
+.ultimo-valor small { display: block; font-size: .72rem; color: var(--texto-suave); }
+.ultimo-valor .sin-dato { color: var(--texto-suave); font-size: .85rem; }
