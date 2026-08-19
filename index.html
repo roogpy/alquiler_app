@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alquiler de Vehiculos</title>
+<meta name="theme-color" content="#101828">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="encabezado">
+  <h1>🔑 Alquiler de Vehículos</h1>
+  <p id="fecha-actual"></p>
+</header>
+
+<main>
+  <!-- TAB CALENDARIO -->
+  <section id="tab-calendario" class="tab activa">
+    <div class="tarjeta" id="sin-vehiculos" hidden>
+      <h2>Todavía no hay vehículos</h2>
+      <p class="vacio">Cargá el primer vehículo en la pestaña <strong>Vehículos</strong>: nombre, inquilino, monto diario y fecha de inicio del alquiler.</p>
+    </div>
+
+    <div id="bloque-calendario">
+      <label class="selector-veh">Vehículo
+        <select id="cal-vehiculo"></select>
+      </label>
+
+      <div class="tarjetas-mini">
+        <div class="mini"><span>Cobrado en el mes</span><strong id="mes-cobrado">₲ 0</strong></div>
+        <div class="mini"><span>Pendiente del mes</span><strong id="mes-deuda" class="deuda">₲ 0</strong></div>
+        <div class="mini"><span>Días pagados</span><strong id="mes-dias">0 / 0</strong></div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="nav-mes">
+          <button id="mes-prev" class="flecha" type="button" aria-label="Mes anterior">‹</button>
+          <span id="mes-titulo"></span>
+          <button id="mes-next" class="flecha" type="button" aria-label="Mes siguiente">›</button>
+        </div>
+
+        <div class="calendario" id="cal-dow"></div>
+        <div class="calendario" id="cal-grilla"></div>
+
+        <div class="leyenda">
+          <span><i class="lg pagado"></i>Pagado</span>
+          <span><i class="lg impago"></i>No pagó</span>
+          <span><i class="lg pendiente"></i>Pendiente</span>
+          <span><i class="lg libre"></i>Sin cobro</span>
+        </div>
+
+        <div class="fila botones-rapidos">
+          <button id="btn-hoy-pagado" class="btn verde" type="button">✓ Marcar hoy como pagado</button>
+        </div>
+      </div>
+
+      <div class="tarjeta" id="detalle-dia" hidden>
+        <h2 id="detalle-titulo"></h2>
+        <p class="vacio" id="detalle-estado"></p>
+        <div class="fila">
+          <label>Monto recibido (₲) <input type="text" id="detalle-monto" inputmode="numeric" autocomplete="off" placeholder="0"></label>
+          <label>Nota <input type="text" id="detalle-nota" maxlength="60" placeholder="opcional"></label>
+        </div>
+        <div class="acciones">
+          <button class="btn verde" type="button" data-estado="pagado">✓ Pagado</button>
+          <button class="btn rojo" type="button" data-estado="impago">✗ No pagó</button>
+          <button class="btn gris" type="button" data-estado="libre">— Sin cobro</button>
+          <button class="btn gris" type="button" data-estado="limpiar">↺ Limpiar</button>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Movimientos del mes</h2>
+        <ul id="lista-mes" class="lista"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB RESUMEN -->
+  <section id="tab-resumen" class="tab">
+    <label class="selector-veh">Vehículo
+      <select id="res-vehiculo"></select>
+    </label>
+
+    <div class="tarjetas-mini">
+      <div class="mini neto"><span>Recibido total</span><strong id="res-total">₲ 0</strong></div>
+      <div class="mini"><span>Pendiente acumulado</span><strong id="res-deuda" class="deuda">₲ 0</strong></div>
+    </div>
+    <div class="tarjetas-mini">
+      <div class="mini"><span>Días pagados</span><strong id="res-dias">0 / 0</strong></div>
+      <div class="mini"><span>Promedio por día</span><strong id="res-promedio">₲ 0</strong></div>
+    </div>
+
+    <div class="tarjeta">
+      <h2 id="res-desde"></h2>
+      <div id="res-tabla"></div>
+    </div>
+
+    <div class="tarjeta">
+      <h2 class="con-total"><span>Cobrado por mes</span> <strong id="res-grafico-total">₲ 0</strong></h2>
+      <div id="res-grafico" class="grafico"></div>
+    </div>
+
+    <div class="fila derecha">
+      <button id="btn-csv" class="btn gris" type="button">⬇ Exportar CSV</button>
+    </div>
+  </section>
+
+  <!-- TAB VEHICULOS -->
+  <section id="tab-vehiculos" class="tab">
+    <form id="form-vehiculo" class="tarjeta">
+      <h2 id="form-titulo">➕ Nuevo vehículo</h2>
+      <input type="hidden" id="v-id">
+      <div class="fila">
+        <label>Vehículo <input type="text" id="v-nombre" maxlength="40" required placeholder="Toyota Vitz blanco"></label>
+        <label>Inquilino <input type="text" id="v-inquilino" maxlength="40" placeholder="opcional"></label>
+      </div>
+      <div class="fila">
+        <label>Monto diario (₲) <input type="text" id="v-monto" inputmode="numeric" autocomplete="off" required placeholder="150.000"></label>
+        <label>Inicio del alquiler <input type="date" id="v-inicio" required></label>
+      </div>
+      <label>Días que se cobra</label>
+      <div class="dias-semana" id="v-dias"></div>
+      <div class="fila">
+        <button type="submit" class="btn verde">Guardar vehículo</button>
+        <button type="button" id="btn-cancelar" class="btn gris" hidden>Cancelar</button>
+      </div>
+    </form>
+
+    <div class="tarjeta">
+      <h2>Vehículos cargados</h2>
+      <ul id="lista-vehiculos" class="lista"></ul>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Copia de seguridad</h2>
+      <p class="vacio">Los datos viven en este dispositivo (localStorage). Descargá el respaldo antes de cambiar de teléfono o limpiar el navegador.</p>
+      <div class="fila">
+        <button id="btn-exportar" class="btn gris" type="button">⬇ Descargar respaldo</button>
+        <button id="btn-importar" class="btn gris" type="button">⬆ Restaurar respaldo</button>
+      </div>
+      <input type="file" id="archivo-import" accept="application/json" hidden>
+    </div>
+  </section>
+</main>
+
+<nav class="nav-inferior">
+  <button data-tab="calendario" class="activa" type="button">📅<span>Calendario</span></button>
+  <button data-tab="resumen" type="button">📊<span>Resumen</span></button>
+  <button data-tab="vehiculos" type="button">🚗<span>Vehículos</span></button>
+</nav>
+
+<script src="app.js"></script>
+</body>
+</html>
