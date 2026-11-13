@@ -4,6 +4,7 @@
 //   pagos      -> por vehiculo, mapa fecha -> estado del dia (solo los dias tocados)
 //   extras     -> por vehiculo, cobros por fuera del diario (50% de un arreglo, etc.)
 //   servicios  -> por vehiculo, trabajos de taller con fecha y kilometraje
+//   predeterminado -> id del vehiculo que se muestra al abrir la app
 const STORE_KEY = 'alquiler-datos-v1';
 
 const ESTADOS = {
@@ -11,6 +12,7 @@ const ESTADOS = {
   impago: { etiqueta: 'No pagó' },
   pendiente: { etiqueta: 'Pendiente' },
   taller: { etiqueta: 'En taller' },
+  alfinal: { etiqueta: 'Corre al final' },
   libre:  { etiqueta: 'Sin cobro' },
   sinmarcar: { etiqueta: 'Sin marcar' },
 };
@@ -33,7 +35,10 @@ const DIAS_SEMANA = [
   { dow: 0, corto: 'D' },
 ];
 
-let datos = { vehiculos: [], pagos: {}, extras: {}, servicios: {} };
+// Vehiculo que se abre si el usuario todavia no eligio uno con la estrella.
+const PREDETERMINADO_POR_NOMBRE = ['vitz', '2013'];
+
+let datos = { vehiculos: [], pagos: {}, extras: {}, servicios: {}, predeterminado: null };
 try {
   const guardado = JSON.parse(localStorage.getItem(STORE_KEY));
   if (guardado && Array.isArray(guardado.vehiculos)) {
@@ -42,6 +47,7 @@ try {
       pagos: guardado.pagos || {},
       extras: guardado.extras || {},
       servicios: guardado.servicios || {},
+      predeterminado: guardado.predeterminado || null,
     };
   }
 } catch (e) { /* datos corruptos: se arranca vacio */ }
@@ -158,9 +164,45 @@ function extrasDe(v) { return datos.extras[v.id] || []; }
 
 function serviciosDe(v) { return datos.servicios[v.id] || []; }
 
+// Vehiculo con el que arranca la app: el marcado con la estrella; si no hay
+// ninguno marcado, el Toyota Vitz 2013; y si tampoco esta, el primero.
+function vehiculoInicial() {
+  if (!datos.vehiculos.length) return null;
+  const marcado = vehiculoPorId(datos.predeterminado);
+  if (marcado) return marcado.id;
+  const porNombre = datos.vehiculos.find(v => {
+    const nombre = String(v.nombre || '').toLowerCase();
+    return PREDETERMINADO_POR_NOMBRE.every(p => nombre.includes(p));
+  });
+  return (porNombre || datos.vehiculos[0]).id;
+}
+
+// Dias cuyo diario se corrio al final del alquiler (no se pago ese dia, por
+// ejemplo por un problema con el vehiculo, y se cobra al terminar).
+function diasAlFinal(v) {
+  return Object.entries(datos.pagos[v.id] || {})
+    .filter(([iso, reg]) => reg.estado === 'alfinal' && iso >= v.inicio)
+    .map(([iso]) => iso)
+    .sort();
+}
+
+// Si el vehiculo tiene fecha de fin, cada dia corrido la estira un dia de
+// cobro. Devuelve el fin nuevo y las fechas en las que se recuperan.
+function recupero(v) {
+  const cantidad = diasAlFinal(v).length;
+  const fechas = [];
+  if (!v.fin || !cantidad || !v.dias || !v.dias.length) return { cantidad, fin: v.fin || null, fechas };
+  let iso = v.fin;
+  while (fechas.length < cantidad) {
+    iso = sumarDias(iso, 1);
+    if (v.dias.includes(aFecha(iso).getDay())) fechas.push(iso);
+  }
+  return { cantidad, fin: iso, fechas };
+}
+
 // Estado de un dia para un vehiculo:
 //   fuera     -> anterior al inicio del alquiler
-//   pagado / impago / pendiente / taller / libre -> marcado a mano
+//   pagado / impago / pendiente / taller / alfinal / libre -> marcado a mano
 //   libre     -> dia de la semana en el que no se cobra
 //   futuro    -> todavia no llego
 //   sinmarcar -> dia de cobro ya pasado que todavia no se clasifico
@@ -185,8 +227,8 @@ function acumular(v, desde, hasta) {
   const hoy = hoyISO();
   const inicio = desde < v.inicio ? v.inicio : desde;
   const total = {
-    cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0,
-    diasPagados: 0, diasPeriodo: 0, diasImpagos: 0, diasTaller: 0,
+    cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0, diarioAlFinal: 0,
+    diasPagados: 0, diasPeriodo: 0, diasImpagos: 0, diasTaller: 0, diasAlFinal: 0,
     pendientes: [],
   };
 
@@ -206,6 +248,13 @@ function acumular(v, desde, hasta) {
     if (estado === 'taller' && iso <= hoy) {
       total.diasTaller++;
       total.diarioTaller += Number(v.monto) || 0;
+      continue;
+    }
+    // Dia corrido al final: no es deuda de hoy, se cobra al terminar el
+    // alquiler. Cuenta aunque sea futuro, porque es una decision ya tomada.
+    if (estado === 'alfinal') {
+      total.diasAlFinal++;
+      total.diarioAlFinal += Number(v.monto) || 0;
       continue;
     }
     if (iso > hoy || estado === 'fuera' || estado === 'futuro') continue;
@@ -229,8 +278,8 @@ function acumular(v, desde, hasta) {
 
 function acumularVehiculos(vehiculos, desde, hasta) {
   const total = {
-    cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0,
-    diasPagados: 0, diasPeriodo: 0, diasImpagos: 0, diasTaller: 0,
+    cobrado: 0, deuda: 0, extras: 0, diarioTaller: 0, diarioAlFinal: 0,
+    diasPagados: 0, diasPeriodo: 0, diasImpagos: 0, diasTaller: 0, diasAlFinal: 0,
     pendientes: [],
   };
   vehiculos.forEach(v => {
@@ -265,7 +314,7 @@ function ultimoServicio(v, tipo) {
 }
 
 // ---------- Estado de la UI ----------
-let vehSel = datos.vehiculos.length ? datos.vehiculos[0].id : null;
+let vehSel = vehiculoInicial();
 let mesSel = hoyISO().slice(0, 7);
 let diaSel = null;
 let editando = null;        // id del vehiculo en edicion
@@ -300,7 +349,7 @@ function renderSelectores() {
   $('sin-vehiculos').hidden = hay;
   $('bloque-calendario').hidden = !hay;
 
-  if (hay && !vehiculoPorId(vehSel)) vehSel = datos.vehiculos[0].id;
+  if (hay && !vehiculoPorId(vehSel)) vehSel = vehiculoInicial();
 
   opcionesVehiculo($('cal-vehiculo'), false);
   opcionesVehiculo($('tal-vehiculo'), false);
@@ -339,6 +388,7 @@ function renderCalendario() {
   const conExtra = {};
   extrasDe(v).forEach(x => { if (claveMes(x.fecha) === mesSel) conExtra[x.fecha] = true; });
 
+  const rec = recupero(v);
   const total = diasDelMes(anio, mes);
   for (let d = 1; d <= total; d++) {
     const iso = mesSel + '-' + String(d).padStart(2, '0');
@@ -349,6 +399,10 @@ function renderCalendario() {
     if (iso === hoy) btn.classList.add('hoy');
     if (iso === diaSel) btn.classList.add('sel');
     if (conExtra[iso]) btn.classList.add('con-extra');
+    if (rec.fechas.includes(iso)) {
+      btn.classList.add('recupero');
+      btn.title = 'Día de recupero: acá se cobra un diario corrido al final';
+    }
     btn.dataset.fecha = iso;
     btn.disabled = estado === 'fuera';
 
@@ -359,6 +413,7 @@ function renderCalendario() {
     if (estado === 'pagado') marca.textContent = fmtCorto(montoCobrado(v, iso));
     else if (estado === 'impago') marca.textContent = '✗';
     else if (estado === 'taller') marca.textContent = '🔧';
+    else if (estado === 'alfinal') marca.textContent = '↪';
     else if (estado === 'pendiente') marca.textContent = '•';
     else marca.textContent = ' ';
     if (estado === 'sinmarcar') btn.title = 'Sin marcar';
@@ -373,7 +428,21 @@ function renderCalendario() {
   deuda.classList.toggle('hay', t.deuda > 0);
   $('mes-dias').textContent = t.diasPagados + ' / ' + t.diasPeriodo;
   $('mes-taller').textContent = t.diasTaller;
+  $('mes-alfinal').textContent = t.diasAlFinal;
   $('mes-extras').textContent = fmt(t.extras);
+
+  // Aviso de lo que quedo corrido al final, en todo el alquiler.
+  const aviso = $('cal-alfinal');
+  aviso.hidden = !rec.cantidad && !v.fin;
+  if (rec.cantidad) {
+    const dias = rec.cantidad + (rec.cantidad === 1 ? ' día corrido' : ' días corridos');
+    aviso.textContent = '↪ ' + dias + ' al final (' + fmt(rec.cantidad * (Number(v.monto) || 0)) + '). ' +
+      (v.fin
+        ? 'El alquiler terminaba el ' + fechaCorta(v.fin) + ' y ahora termina el ' + fechaCorta(rec.fin) + '.'
+        : 'Cargá la fecha de fin del alquiler en Vehículos para ver hasta cuándo se estira.');
+  } else if (v.fin) {
+    aviso.textContent = 'Fin del alquiler: ' + fechaCorta(v.fin) + '.';
+  }
 
   renderDetalle();
   renderListaMes();
@@ -394,6 +463,7 @@ function renderDetalle() {
     : estado === 'sinmarcar' ? 'Sin marcar — no cuenta como deuda hasta que lo marques'
     : estado === 'futuro' ? 'Día futuro (podés registrar un adelanto)'
     : estado === 'taller' ? 'En taller — no se cobra el diario'
+    : estado === 'alfinal' ? 'Corre al final — ' + fmt(v.monto) + ' se cobra al terminar el alquiler, no es deuda de hoy'
     : ESTADOS[estado] ? ESTADOS[estado].etiqueta : '';
   $('detalle-estado').textContent = desc;
 
@@ -440,8 +510,9 @@ function renderListaMes() {
     const monto = document.createElement('span');
     monto.className = 'monto ' + (reg.estado === 'pagado' ? 'positivo'
       : reg.estado === 'pendiente' ? 'negativo'
-      : reg.estado === 'impago' ? 'apagado' : '');
+      : (reg.estado === 'impago' || reg.estado === 'alfinal') ? 'apagado' : '');
     monto.textContent = reg.estado === 'pagado' ? fmt(reg.monto)
+      : reg.estado === 'alfinal' ? '↪ ' + fmt(v.monto)
       : (reg.estado === 'pendiente' || reg.estado === 'impago') ? '−' + fmt(v.monto) : '—';
 
     const borrar = document.createElement('button');
@@ -567,6 +638,7 @@ function renderResumen() {
       .forEach(id => { $(id).textContent = fmt(0); });
     $('res-dias').textContent = '0 / 0';
     $('res-taller').textContent = '0';
+    $('res-alfinal').textContent = '0';
     $('res-dias-pend').textContent = '0';
     $('res-impagos').textContent = '0';
     $('res-rango').textContent = 'Historial';
@@ -583,6 +655,7 @@ function renderResumen() {
   deuda.classList.toggle('hay', t.deuda > 0);
   $('res-dias').textContent = t.diasPagados + ' / ' + t.diasPeriodo;
   $('res-taller').textContent = t.diasTaller;
+  $('res-alfinal').textContent = t.diasAlFinal;
   $('res-dias-pend').textContent = t.pendientes.length;
   $('res-impagos').textContent = t.diasImpagos;
   $('res-diario').textContent = fmt(t.cobrado);
@@ -602,6 +675,10 @@ function renderResumen() {
   if (t.diasTaller) {
     partes.push(t.diasTaller + (t.diasTaller === 1 ? ' día en taller' : ' días en taller') +
       ' (' + fmt(t.diarioTaller) + ' de diario) tampoco suman.');
+  }
+  if (t.diasAlFinal) {
+    partes.push(t.diasAlFinal + (t.diasAlFinal === 1 ? ' día corrido' : ' días corridos') +
+      ' al final (' + fmt(t.diarioAlFinal) + ') se cobran al terminar el alquiler: no son deuda de hoy.');
   }
   $('res-nota-taller').textContent = partes.join(' ');
   const ordenados = t.pendientes.sort((a, b) => b.fecha.localeCompare(a.fecha));
@@ -658,7 +735,7 @@ function renderResumen() {
   env.className = 'envoltorio-tabla';
   const tab = document.createElement('table');
   tab.className = 'tabla';
-  tab.innerHTML = '<thead><tr><th>Mes</th><th>Pagados</th><th>No pagó</th><th>Taller</th><th>Diario</th><th>Adicional</th><th>Pendiente</th></tr></thead>';
+  tab.innerHTML = '<thead><tr><th>Mes</th><th>Pagados</th><th>No pagó</th><th>Taller</th><th>Al final</th><th>Diario</th><th>Adicional</th><th>Pendiente</th></tr></thead>';
   const tbody = document.createElement('tbody');
   meses.slice().reverse().forEach(mes => {
     const tr = document.createElement('tr');
@@ -667,6 +744,7 @@ function renderResumen() {
       '<td>' + mes.total.diasPagados + ' / ' + mes.total.diasPeriodo + '</td>' +
       '<td>' + (mes.total.diasImpagos || '—') + '</td>' +
       '<td class="taller">' + (mes.total.diasTaller || '—') + '</td>' +
+      '<td class="alfinal">' + (mes.total.diasAlFinal || '—') + '</td>' +
       '<td class="cobrado">' + fmt(mes.total.cobrado) + '</td>' +
       '<td>' + fmt(mes.total.extras) + '</td>' +
       '<td class="deuda' + (mes.total.deuda > 0 ? ' hay' : '') + '">' + fmt(mes.total.deuda) + '</td>';
@@ -679,6 +757,7 @@ function renderResumen() {
     '<td>' + t.diasPagados + ' / ' + t.diasPeriodo + '</td>' +
     '<td>' + (t.diasImpagos || '—') + '</td>' +
     '<td class="taller">' + (t.diasTaller || '—') + '</td>' +
+    '<td class="alfinal">' + (t.diasAlFinal || '—') + '</td>' +
     '<td class="cobrado">' + fmt(t.cobrado) + '</td>' +
     '<td>' + fmt(t.extras) + '</td>' +
     '<td class="deuda' + (t.deuda > 0 ? ' hay' : '') + '">' + fmt(t.deuda) + '</td>';
@@ -881,6 +960,15 @@ function renderVehiculos() {
     const small = document.createElement('small');
     small.textContent = fmt(v.monto) + ' por día · desde ' + fechaLegible(v.inicio, true) +
       ' · ' + v.dias.length + ' días/semana';
+    const rec = recupero(v);
+    if (v.fin) {
+      small.textContent += rec.cantidad
+        ? ' · termina el ' + fechaCorta(rec.fin) + ' (era el ' + fechaCorta(v.fin) + ', ' + rec.cantidad +
+          (rec.cantidad === 1 ? ' día corrido' : ' días corridos') + ' al final)'
+        : ' · termina el ' + fechaCorta(v.fin);
+    } else if (rec.cantidad) {
+      small.textContent += ' · ' + rec.cantidad + (rec.cantidad === 1 ? ' día corrido' : ' días corridos') + ' al final';
+    }
     det.append(titulo, small);
 
     const monto = document.createElement('span');
@@ -889,6 +977,21 @@ function renderVehiculos() {
 
     const acciones = document.createElement('div');
     acciones.className = 'acciones-item';
+
+    const esInicial = vehiculoInicial() === v.id;
+    const estrella = document.createElement('button');
+    estrella.className = 'icono estrella' + (esInicial ? ' activa' : '');
+    estrella.type = 'button';
+    estrella.textContent = esInicial ? '★' : '☆';
+    estrella.title = esInicial ? 'Es el vehículo que se muestra al abrir' : 'Mostrar este vehículo al abrir';
+    estrella.setAttribute('aria-label', estrella.title);
+    estrella.addEventListener('click', () => {
+      datos.predeterminado = v.id;
+      vehSel = v.id;
+      diaSel = null;
+      guardar();
+      renderTodo();
+    });
 
     const editar = document.createElement('button');
     editar.className = 'icono';
@@ -908,12 +1011,13 @@ function renderVehiculos() {
       delete datos.pagos[v.id];
       delete datos.extras[v.id];
       delete datos.servicios[v.id];
-      if (vehSel === v.id) vehSel = datos.vehiculos.length ? datos.vehiculos[0].id : null;
+      if (datos.predeterminado === v.id) datos.predeterminado = null;
+      if (vehSel === v.id) vehSel = vehiculoInicial();
       guardar();
       renderTodo();
     });
 
-    acciones.append(editar, borrar);
+    acciones.append(estrella, editar, borrar);
     li.append(det, monto, acciones);
     lista.appendChild(li);
   });
@@ -927,6 +1031,7 @@ function cargarEnForm(v) {
   $('v-inquilino').value = v.inquilino || '';
   $('v-monto').value = formatoMiles(v.monto);
   $('v-inicio').value = v.inicio;
+  $('v-fin').value = v.fin || '';
   diasForm = v.dias.slice();
   renderBotonesDias();
   $('btn-cancelar').hidden = false;
@@ -1106,9 +1211,11 @@ $('form-vehiculo').addEventListener('submit', e => {
     inquilino: $('v-inquilino').value.trim(),
     monto: montoDe($('v-monto')),
     inicio: $('v-inicio').value,
+    fin: $('v-fin').value || '',
     dias: diasForm.slice().sort(),
   };
   if (!v.nombre || !v.monto || !v.inicio) return;
+  if (v.fin && v.fin < v.inicio) { alert('El fin del alquiler no puede ser anterior al inicio.'); return; }
 
   if (editando) {
     datos.vehiculos = datos.vehiculos.map(x => (x.id === editando ? v : x));
@@ -1147,8 +1254,9 @@ $('archivo-import').addEventListener('change', e => {
         pagos: nuevo.pagos || {},
         extras: nuevo.extras || {},
         servicios: nuevo.servicios || {},
+        predeterminado: nuevo.predeterminado || null,
       };
-      vehSel = datos.vehiculos.length ? datos.vehiculos[0].id : null;
+      vehSel = vehiculoInicial();
       guardar();
       renderTodo();
       alert('Respaldo restaurado.');

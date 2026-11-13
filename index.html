@@ -36,6 +36,7 @@
       <div class="tarjetas-mini">
         <div class="mini"><span>Días pagados</span><strong id="mes-dias">0 / 0</strong></div>
         <div class="mini"><span>Días en taller</span><strong id="mes-taller">0</strong></div>
+        <div class="mini"><span>Corren al final</span><strong id="mes-alfinal">0</strong></div>
         <div class="mini"><span>Adicionales</span><strong id="mes-extras">₲ 0</strong></div>
       </div>
 
@@ -54,9 +55,11 @@
           <span><i class="lg impago"></i>No pagó</span>
           <span><i class="lg pendiente"></i>Pendiente</span>
           <span><i class="lg taller"></i>En taller</span>
+          <span><i class="lg alfinal"></i>Corre al final</span>
           <span><i class="lg libre"></i>Sin cobro</span>
           <span><i class="lg"></i>Sin marcar</span>
         </div>
+        <p class="vacio nota aviso-alfinal" id="cal-alfinal" hidden></p>
 
         <div class="fila botones-rapidos">
           <button id="btn-hoy-pagado" class="btn verde" type="button">✓ Marcar hoy como pagado</button>
@@ -75,8 +78,9 @@
           <button class="btn rojo" type="button" data-estado="impago">✗ No pagó</button>
           <button class="btn ambar" type="button" data-estado="pendiente">• Pendiente</button>
           <button class="btn azul" type="button" data-estado="taller">🔧 En taller</button>
+          <button class="btn violeta" type="button" data-estado="alfinal">↪ Correr al final</button>
           <button class="btn gris" type="button" data-estado="libre">— Sin cobro</button>
-          <button class="btn gris" type="button" data-estado="limpiar">↺ Limpiar</button>
+          <button class="btn gris ancho" type="button" data-estado="limpiar">↺ Limpiar</button>
         </div>
       </div>
 
@@ -124,6 +128,9 @@
     </div>
     <div class="tarjetas-mini">
       <div class="mini"><span>Días en taller</span><strong id="res-taller">0</strong></div>
+      <div class="mini"><span>Corren al final</span><strong id="res-alfinal">0</strong></div>
+    </div>
+    <div class="tarjetas-mini">
       <div class="mini"><span>Cobros diarios</span><strong id="res-diario">₲ 0</strong></div>
       <div class="mini"><span>Adicionales</span><strong id="res-extras">₲ 0</strong></div>
     </div>
@@ -209,6 +216,8 @@
         <label>Monto diario (₲) <input type="text" id="v-monto" inputmode="numeric" autocomplete="off" required placeholder="150.000"></label>
         <label>Inicio del alquiler <input type="date" id="v-inicio" required></label>
       </div>
+      <label>Fin del alquiler (opcional) <input type="date" id="v-fin"></label>
+      <p class="vacio">Si cargás el fin, cada día que marques como <strong>Corre al final</strong> lo estira un día de cobro.</p>
       <label>Días que se cobra</label>
       <div class="dias-semana" id="v-dias"></div>
       <div class="fila">

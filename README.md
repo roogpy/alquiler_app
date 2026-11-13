@@ -33,6 +33,11 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
      La nota sirve para anotar el arreglo ("paga el lunes").
    - **🔧 En taller** — el auto estuvo con el mecánico: no se cobra el diario y el día
      suma al contador de *días en taller*. La **nota** queda para anotar el trabajo.
+   - **↪ Correr al final** — ese día no se pagó (por ejemplo, por un problema con el
+     vehículo) y el diario se cobra al terminar el alquiler. No es deuda de hoy: suma al
+     contador *Corren al final*. Si el vehículo tiene **fin del alquiler** cargado, cada
+     día corrido lo estira un día de cobro y el calendario marca con borde punteado los
+     días en que se recupera.
    - **— Sin cobro** — feriado, vehículo parado: ese día no se espera plata.
    - **↺ Limpiar** — vuelve el día a su estado automático.
 
@@ -60,6 +65,7 @@ navegador ("Agregar a la pantalla de inicio") y funciona sin conexión.
 | Rojo | No pagó | Marcado a mano: ese día no pagó (registro, sin deuda) |
 | Borde ámbar | Pendiente | Marcado a mano: debe ese diario (lo único que es deuda) |
 | Azul 🔧 | En taller | Día con el mecánico: no se cobra y se cuenta aparte |
+| Violeta ↪ | Corre al final | No se pagó ese día: el diario se cobra al terminar el alquiler |
 | Gris | Sin cobro | Día de la semana no cobrable o marcado como libre |
 | Neutro | Sin marcar | Día de cobro que pasó y todavía no se clasificó |
 
@@ -76,6 +82,12 @@ Los días **en taller** y los **sin cobro** no generan deuda: no entran en los d
 esperados, no suman al pendiente y no aparecen en la lista de días pendientes. El
 Resumen lo dice en la tarjeta de pendientes (cuántos días fueron y cuánto diario
 representan) y los muestra en su propia columna *Taller* de la tabla mensual.
+
+### Vehículo predeterminado
+
+Al abrir, el Calendario y el Taller muestran el vehículo marcado con la **★** en la
+pestaña Vehículos. Mientras no se marque ninguno, se abre el **Toyota Vitz 2013** (el
+que tenga `vitz` y `2013` en el nombre) y, si no existe, el primero de la lista.
 
 ## Respaldos
 

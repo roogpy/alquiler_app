@@ -335,3 +335,15 @@ input:focus, select:focus { outline: 2px solid var(--acento); border-color: tran
 .btn.ambar { background: #b7791f; }
 
 .monto.apagado { color: var(--texto-suave); }
+
+/* ---------- Dias corridos al final del alquiler ---------- */
+.dia.alfinal { background: #2a1f52; border-color: var(--violeta); }
+.dia.alfinal .marca { color: #c4b5fd; font-size: .7rem; }
+/* Dia en el que se recupera un diario corrido (despues del fin original). */
+.dia.recupero { border: 1px dashed var(--violeta); opacity: 1; }
+.leyenda .lg.alfinal { background: #2a1f52; border-color: var(--violeta); }
+.chip.alfinal { background: var(--violeta); color: #fff; }
+.btn.violeta { background: #6d47d9; }
+.tabla td.alfinal { color: #c4b5fd; }
+.aviso-alfinal { margin-top: 12px; margin-bottom: 0; border-left-color: var(--violeta); }
+.icono.estrella.activa { color: var(--ambar); }
